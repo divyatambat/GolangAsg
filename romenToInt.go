@@ -15,7 +15,7 @@ func romenToInteger(input string) int {
 	for i := 0 ; i < len(input) ; i++ {
 		switch input[i] {
 			case 'I':
-				if input[i+1] == 'V' || input[i+1] == 'X' {
+				if i < len(input)-1 && (input[i+1] == 'V' || input[i+1] == 'X') {
 					output -= 1
 				} else {
 					output += 1
@@ -23,7 +23,7 @@ func romenToInteger(input string) int {
 			case 'V':
 				output += 5
 			case 'X':
-				if input[i+1] == 'L' || input[i+1] == 'C' {
+				if i < len(input)-1 && (input[i+1] == 'L' || input[i+1] == 'C') {
 					output -= 10
 				} else {
 					output += 10
@@ -31,7 +31,7 @@ func romenToInteger(input string) int {
 			case 'L':
 				output += 50
 			case 'C':
-				if input[i+1] == 'D' || input[i+1] == 'M' {
+				if i < len(input)-1 && (input[i+1] == 'D' || input[i+1] == 'M') {
 					output -= 100
 				} else {
 					output += 100
