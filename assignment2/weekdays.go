@@ -21,12 +21,19 @@ func main() {
 	fmt.Println("Input: ")
 	fmt.Scanln(&index)
 	
-	if day := daysMap[index]; day != "" {
+	/*
+	if day, ok := daysMap[index]; ok {
 		fmt.Println("Output: ", day)
 	} else {
 		fmt.Println("Output: Not a day!")
+	}*/
+	
+	day, ok := daysMap[index]
+	if !ok {
+		fmt.Println("Output: Not a day!")
+		return
 	}
 	
-	
+	fmt.Println("Output: ", day)
 }
 
