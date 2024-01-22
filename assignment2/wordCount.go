@@ -1,40 +1,36 @@
 package main
 
 import (
-	"fmt"
-	"strings"
 	"bufio"
-	"os"	
+	"fmt"
+	"os"
+	"strings"
 )
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	
+
 	fmt.Println("Enter a string: ")
 	scanner.Scan()
 	input := scanner.Text()
-		
+
 	words := strings.Fields(input)
-	
+
 	wordFreq := make(map[string]int)
-	
-	for _, word := range words {
-		wordFreq[word]++
-	}
-	
-	var maxFreq int
-	for _, freq := range wordFreq {
-		if freq > maxFreq {
-			maxFreq = freq
-		}
-	}
+	maxFreq := 0
 	
 	var result []string
-	for word, freq := range wordFreq {
-		if freq == maxFreq {
+
+	for _, word := range words {
+		wordFreq[word]++
+		if wordFreq[word] > maxFreq {
+			maxFreq = wordFreq[word]
+			result = []string{word}
+		} else if wordFreq[word] == maxFreq {
 			result = append(result, word)
 		}
 	}
-	
+
 	fmt.Println("Output: ", result)
 }
+
