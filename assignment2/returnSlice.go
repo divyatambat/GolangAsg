@@ -8,7 +8,7 @@ func main() {
 	array := []string{"qwe", "wer", "ert", "rty", "tyu", "yui", "uio", "iop"}
 	
 	var index1, index2 int
-	fmt.Print("Enter two indexes [saperated by white space]: ")
+	fmt.Print("Enter two indexes [saparated by white space]: ")
 	fmt.Scan(&index1, &index2)
 
 	if index1<0 || index2 >= len(array) || index1 >= len(array) || index2<0 {
