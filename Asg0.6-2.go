@@ -21,9 +21,9 @@ func main() {
 
 	value, err := accessSlice(slice, index)
 	if err != nil {
-		fmt.Printf("Internal error: %d\n", err)
-	} else {
-		fmt.Printf("Item: %d, Value: %d\n", index, value)
-	}
+		fmt.Printf("Internal error: %s\n", err)
+		return
+	} 
+	fmt.Printf("Item: %d, Value: %d\n", index, value)
 
 }
