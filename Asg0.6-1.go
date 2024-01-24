@@ -6,7 +6,7 @@ func accessSlice(slice []int, index int) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("Internal error: %d\n", err)
+			fmt.Printf("Internal error: %s\n", err)
 		}
 	}()
 
