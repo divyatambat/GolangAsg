@@ -16,8 +16,9 @@ func main() {
 		defer wg.Done()
 
 		runes := []rune(originalString)
+		halfLength := len(runes) / 2
 
-		for currentIndex := 0; currentIndex < len(runes)/2; currentIndex++ {
+		for currentIndex := 0; currentIndex < halfLength; currentIndex++ {
 			oppositeIndex := len(runes) - 1 - currentIndex
 			runes[currentIndex], runes[oppositeIndex] = runes[oppositeIndex], runes[currentIndex]
 		}
