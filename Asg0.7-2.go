@@ -6,6 +6,14 @@ import (
 	"sync"
 )
 
+func reverseString(s string) string {
+	bytes := []byte(s)
+	for i, j := 0, len(bytes)-1; i < j; i, j = i+1, j-1 {
+		bytes[i], bytes[j] = bytes[j], bytes[i]
+	}
+	return string(bytes)
+}
+
 func main() {
 	originalString := "test123"
 
@@ -15,16 +23,8 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		runes := []rune(originalString)
-		halfLength := len(runes) / 2
-
-		for currentIndex := 0; currentIndex < halfLength; currentIndex++ {
-			oppositeIndex := len(runes) - 1 - currentIndex
-			runes[currentIndex], runes[oppositeIndex] = runes[oppositeIndex], runes[currentIndex]
-		}
-
-		reversedString := string(runes)
-		fmt.Printf("Reversed string: %s - %d\n", reversedString, runtime.NumGoroutine()) // Print in a single line for desired output
+		revString := reverseString(originalString)
+		fmt.Printf("Output string: %s - %d\n", revString, runtime.NumGoroutine())
 	}()
 
 	wg.Wait()
