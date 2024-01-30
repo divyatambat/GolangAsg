@@ -19,14 +19,14 @@ func (r RectangleAsg2) Perimeter() int {
 }
 
 func main() {
-	var length, width int
+	var input_length, input_width int
 
 	fmt.Print("Enter length of rectangle: ")
-	fmt.Scan(&length)
+	fmt.Scan(&input_length)
 	fmt.Print("Enter width of rectangle: ")
-	fmt.Scan(&width)
+	fmt.Scan(&input_width)
 
-	calculationOfRectangle := RectangleAsg2{Length: length, Width: width}
+	calculationOfRectangle := RectangleAsg2{Length: input_length, Width: input_width}
 
 	fmt.Println("Area:", calculationOfRectangle.Area())
 	fmt.Println("Perimeter:", calculationOfRectangle.Perimeter())
