@@ -1,144 +1,140 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"sync"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
-// representing status of a website
-type WebsiteStatus struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
+type Status string
+
+const (
+	Up   Status = "UP"
+	Down Status = "DOWN"
+)
+
+type Websites struct {
+	List []string `json:"websites"`
 }
 
-// interface for checking website status
+var websiteMap map[string]Status = make(map[string]Status)
+var list []string
+
+// interface --> for checking website status
 type StatusChecker interface {
-	Check(name string) (status bool, err error)
+	Check(ctx context.Context, name string) (status Status, err error)
 }
 
-// implements StatusChecker
+// httpChecker implements StatusChecker --> using HTTP calls
 type httpChecker struct{}
 
-func (h httpChecker) Check(name string) (status bool, err error) {
-	resp, err := http.Get(name)
+func (h httpChecker) Check(ctx context.Context, name string) (Status, error) { // context for cancellation and timeouts
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) // timeout
+	defer cancel()
+
+	response, err := http.Get("https://" + name)
 	if err != nil {
-		return false, err
+		return Down, err
 	}
-	defer resp.Body.Close()
-
-	if resp != nil {
-		return resp.StatusCode == 200, nil
-	} else {
-		return false, errors.New("Invalid response!")
-	}
+	defer response.Body.Close()
+	return Up, nil
 }
 
-// websiteMap --> storing website names and their statuses
-var websiteMap = sync.Map{}
+var checker StatusChecker = httpChecker{}
 
-func monitorWebsites(checker StatusChecker) {
-	for {
-		var wg sync.WaitGroup
-		var errs []error
-
-		websiteMap.Range(func(key, value interface{}) bool {
-			name, ok := key.(string) // assert key type
-			if !ok {
-				fmt.Println("Unexpected key type in websiteMap:", key)
-				return true
-			}
-			wg.Add(1)
-			go func(name string) {
-				defer wg.Done()
-				_, err := checker.Check(name)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("error checking website %s: %v", name, err))
-					return
-				}
-				websiteMap.Store(name, "UP")
-			}(name)
-			return true
-		})
-
-		wg.Wait()
-
-		if len(errs) > 0 {
-			fmt.Println("Errors encountered:", errs)
-		}
-
-		time.Sleep(5 * time.Second)
-	}
-}
-
-func submitWebsitesHandler(w http.ResponseWriter, r *http.Request) {
-	var websites []string
-	if err := json.NewDecoder(r.Body).Decode(&websites); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+func getWebsiteList(w http.ResponseWriter, r *http.Request) {
+	var website Websites
+	err := json.NewDecoder(r.Body).Decode(&website)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	for _, website := range websites {
-		websiteMap.Store(website, "UNKNOWN")
-	}
-
-	// monitoring in goroutine
-	go monitorWebsites(httpChecker{})
+	list = website.List
 	w.WriteHeader(http.StatusOK)
 }
 
-func getWebsitesHandler(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
-
-	fmt.Printf("Received request for website: %s\n", name)
-
-	var statuses []WebsiteStatus
-	if name != "" {
-		// Get status for specific website
-		status, ok := websiteMap.Load(name)
-		if !ok {
-			fmt.Printf("Website not found in websiteMap: %s\n", name)
-			http.Error(w, "Website not found", http.StatusNotFound)
-			return
-		}
-		statuses = append(statuses, WebsiteStatus{Name: name, Status: status.(string)})
-	} else {
-		// Get status for all websites
-		websiteMap.Range(func(key, value interface{}) bool {
-			if status, ok := value.(string); ok {
-				statuses = append(statuses, WebsiteStatus{Name: key.(string), Status: status})
+func checkWebsiteStatus(web []string) {
+	fmt.Println("running checkWebsiteStatus")
+	for _, data := range web {
+		go func(data string) {
+			status, err := checker.Check(context.Background(), data)
+			if err != nil {
+				fmt.Printf("Error checking %s: %v\n", data, err)
+				websiteMap[data] = Down
 			} else {
-				fmt.Printf("Unexpected value type in websiteMap: %v\n", value) // Log for debugging
+				websiteMap[data] = status
 			}
-			return true
-		})
+		}(data)
 	}
+}
 
-	// checking websiteMap is not empty before encoding
-	if len(statuses) == 0 {
-		fmt.Println("No website statuses found in websiteMap")
-		http.Error(w, "No website statuses available", http.StatusNotFound)
+func checkWebsiteStatusHandler(w http.ResponseWriter, r *http.Request) {
+	if len(websiteMap) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		w.Write([]byte("The map is empty"))
 		return
 	}
-	// encode and send response
-	json.NewEncoder(w).Encode(statuses)
+
+	name := r.URL.Query().Get("name")
+
+	if name != "" {
+		status, ok := websiteMap[name]
+
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("name not in the list"))
+			return
+		}
+
+		respJson, err := json.Marshal(map[string]string{name: string(status)})
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(respJson)
+		return
+	}
+
+	respJson, err := json.Marshal(websiteMap)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(respJson)
+}
+
+func genericHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "welcome to the server, the page you are looking for does not exist!")
 }
 
 func main() {
-	http.HandleFunc("/websites/submit", submitWebsitesHandler)
-	http.HandleFunc("/websites/status", getWebsitesHandler)
+	fmt.Println("Starting server")
 
-	// start website monitoring in a separate goroutine
-	go monitorWebsites(httpChecker{})
+	r := mux.NewRouter()
 
-	fmt.Println("Starting server on port 3000")
-	if err := http.ListenAndServe(":3000", nil); err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
-		os.Exit(1)
-	}
+	r.HandleFunc("/", genericHandler)
+
+	r.HandleFunc("/input", getWebsiteList).Methods("POST")
+
+	r.HandleFunc("/check", checkWebsiteStatusHandler).Methods("GET")
+
+	go func() {
+		for {
+			if list != nil {
+				//fmt.Print(list)
+				checkWebsiteStatus(list)
+				time.Sleep(time.Minute)
+			}
+		}
+	}()
+
+	http.ListenAndServe(":8080", r)
 }
 
