@@ -5,11 +5,8 @@ import (
 	"sync"
 )
 
-func isEven(n int, m *sync.Mutex) bool {
-	m.Lock()
-	result := n%2 == 0
-	m.Unlock()
-	return result
+func isEven(n int) bool {
+	return n%2 == 0
 }
 
 func main() {
@@ -19,18 +16,20 @@ func main() {
 
 	wg.Add(1)
 	go func() {
-		defer wg.Done()	
-		nIsEven := isEven(n, &mu)
+		defer wg.Done()
+		mu.Lock()
+		nIsEven := isEven(n)
 		if nIsEven {
 			fmt.Println(n, " is even")
 			return
 		}
 		fmt.Println(n, "is odd")
+		mu.Unlock()
 	}()
 	//wg.Wait()
 	wg.Add(1)
 	go func() {
-		defer wg.Done()	
+		defer wg.Done()
 		mu.Lock()
 		n++
 		mu.Unlock()
